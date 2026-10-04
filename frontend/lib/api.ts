@@ -4,7 +4,7 @@
  * Handles communication with the FastAPI backend.
  */
 
-import { AnalysisResponse, ApiResponse } from '@/types/api';
+import { AnalysisResponse } from '@/types/api';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 

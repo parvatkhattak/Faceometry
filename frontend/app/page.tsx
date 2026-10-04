@@ -1,213 +1,185 @@
 "use client";
 
 import Link from "next/link";
+import { FaceMesh, Reveal, SiteNav } from "@/components/ui";
+
+const NAV_LINKS = [
+  { href: "#features", label: "What we measure" },
+  { href: "#how-it-works", label: "How it works" },
+  { href: "#privacy", label: "Privacy" },
+];
+
+const FEATURES = [
+  { icon: "◇", title: "Proportions", color: "#22d3ee", text: "Face width and height, eye spacing, nose and mouth ratios — all normalized so photo size never matters." },
+  { icon: "⬡", title: "Symmetry", color: "#a78bfa", text: "Left and right landmarks are mirrored across your facial midline and compared region by region." },
+  { icon: "φ", title: "Golden Ratio", color: "#fbbf24", text: "See how close selected facial ratios sit to φ ≈ 1.618, with the exact deviation shown." },
+  { icon: "÷3", title: "Facial Thirds", color: "#34d399", text: "Hairline, brows, nose base and chin divide the face vertically into three bands." },
+  { icon: "÷5", title: "Facial Fifths", color: "#fb7185", text: "Five horizontal sections from ear to ear, compared against equal widths." },
+  { icon: "i", title: "Explainable", color: "#38bdf8", text: "Every score comes with a plain-English explanation and the raw numbers behind it." },
+];
+
+const STEPS = [
+  { n: "01", title: "Upload a photo", text: "A clear, front-facing photo with good lighting works best." },
+  { n: "02", title: "Landmarks detected", text: "MediaPipe maps 468 points on your face — right in memory." },
+  { n: "03", title: "Geometry computed", text: "Distances, ratios and mirror errors are calculated and normalized." },
+  { n: "04", title: "Understand the results", text: "Get a Facial Harmony Score with a transparent breakdown." },
+];
 
 export default function HomePage() {
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 glass-card-static px-6 py-4"
-           style={{ borderRadius: 0, borderTop: 'none', borderLeft: 'none', borderRight: 'none' }}>
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <svg width="28" height="28" viewBox="0 0 28 28" fill="none" className="animate-float" style={{ animationDuration: '4s' }}>
-              <polygon points="14,2 26,8 26,20 14,26 2,20 2,8" stroke="url(#navGrad)" strokeWidth="1.5" fill="none" />
-              <circle cx="14" cy="14" r="4" stroke="url(#navGrad)" strokeWidth="1" fill="none" />
-              <defs>
-                <linearGradient id="navGrad" x1="0" y1="0" x2="28" y2="28">
-                  <stop offset="0%" stopColor="#00d4ff" />
-                  <stop offset="100%" stopColor="#8b5cf6" />
-                </linearGradient>
-              </defs>
-            </svg>
-            <span className="font-[family-name:var(--font-display)] font-bold text-lg tracking-wider">
-              FACEOMETRY
-            </span>
-          </div>
-          <div className="hidden md:flex items-center gap-6">
-            <Link href="/analyze" className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-accent-cyan)] transition-colors">
-              Analyze
-            </Link>
-            <a href="#how-it-works" className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-accent-cyan)] transition-colors">
-              How It Works
-            </a>
-            <a href="#privacy" className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-accent-cyan)] transition-colors">
-              Privacy
-            </a>
-          </div>
-        </div>
-      </nav>
+      <SiteNav links={NAV_LINKS} action={{ href: "/analyze", label: "Analyze" }} />
 
-      {/* Hero Section */}
-      <main className="flex-1 flex items-center justify-center pt-20 px-6">
-        <div className="max-w-4xl mx-auto text-center">
-          {/* Geometric decoration */}
-          <div className="relative mb-8 animate-fadeInUp">
-            <svg width="120" height="120" viewBox="0 0 120 120" fill="none" className="mx-auto animate-float">
-              {/* Outer hexagon */}
-              <polygon
-                points="60,5 110,30 110,90 60,115 10,90 10,30"
-                stroke="url(#heroGrad)" strokeWidth="1" fill="none" opacity="0.3"
-              />
-              {/* Inner hexagon */}
-              <polygon
-                points="60,20 95,40 95,80 60,100 25,80 25,40"
-                stroke="url(#heroGrad)" strokeWidth="1" fill="none" opacity="0.5"
-              />
-              {/* Face oval */}
-              <ellipse cx="60" cy="58" rx="22" ry="30" stroke="url(#heroGrad)" strokeWidth="1.5" fill="none" />
-              {/* Eyes */}
-              <ellipse cx="50" cy="50" rx="5" ry="3" stroke="#00d4ff" strokeWidth="1" fill="none" />
-              <ellipse cx="70" cy="50" rx="5" ry="3" stroke="#00d4ff" strokeWidth="1" fill="none" />
-              {/* Nose */}
-              <line x1="60" y1="48" x2="60" y2="62" stroke="#8b5cf6" strokeWidth="0.8" opacity="0.6" />
-              {/* Mouth */}
-              <path d="M52 70 Q60 75 68 70" stroke="#8b5cf6" strokeWidth="1" fill="none" opacity="0.6" />
-              {/* Symmetry line */}
-              <line x1="60" y1="20" x2="60" y2="100" stroke="#00d4ff" strokeWidth="0.5" opacity="0.2" strokeDasharray="4 4" />
-              {/* Measurement lines */}
-              <line x1="38" y1="50" x2="82" y2="50" stroke="#f59e0b" strokeWidth="0.5" opacity="0.2" strokeDasharray="3 3" />
-              <line x1="38" y1="70" x2="82" y2="70" stroke="#f59e0b" strokeWidth="0.5" opacity="0.2" strokeDasharray="3 3" />
-              <defs>
-                <linearGradient id="heroGrad" x1="0" y1="0" x2="120" y2="120">
-                  <stop offset="0%" stopColor="#00d4ff" />
-                  <stop offset="50%" stopColor="#8b5cf6" />
-                  <stop offset="100%" stopColor="#f43f5e" />
-                </linearGradient>
-              </defs>
-            </svg>
-          </div>
+      <main className="flex-1">
+        {/* ---------- Hero ---------- */}
+        <section className="container-x pt-28 sm:pt-36 pb-14 sm:pb-20">
+          <div className="grid lg:grid-cols-[1.15fr_0.85fr] items-center gap-12 lg:gap-8">
+            <div className="text-center lg:text-left">
+              <p className="eyebrow mb-5 animate-fadeInUp">Facial geometry analysis</p>
+              <h1 className="text-[length:var(--fs-hero)] font-bold mb-5 animate-fadeInUp delay-1">
+                <span className="gradient-text">Faceometry</span>
+              </h1>
+              <p className="text-[length:var(--fs-lead)] text-soft font-[family-name:var(--font-display)] mb-5 animate-fadeInUp delay-2">
+                The Geometry Behind Your Face.
+              </p>
+              <p className="text-muted max-w-xl mx-auto lg:mx-0 mb-9 text-base sm:text-lg animate-fadeInUp delay-2">
+                Measure your facial proportions, symmetry and classical ratios with computer
+                vision and mathematics — transparent, explainable, and private.
+              </p>
 
-          {/* Tagline */}
-          <p className="text-sm font-[family-name:var(--font-mono)] text-[var(--color-accent-cyan)] tracking-[0.3em] uppercase mb-4 animate-fadeInUp-delay-1">
-            Facial Geometry Analysis
-          </p>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center lg:justify-start gap-3 sm:gap-4 animate-fadeInUp delay-3">
+                <Link href="/analyze" className="btn-primary">
+                  Analyze your face
+                  <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                    <path d="M4 10h12M11 5l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </Link>
+                <a href="#how-it-works" className="btn-secondary">See how it works</a>
+              </div>
 
-          {/* Title */}
-          <h1 className="font-[family-name:var(--font-display)] text-5xl md:text-7xl font-bold mb-4 animate-fadeInUp-delay-1">
-            <span className="gradient-text">Faceometry</span>
-          </h1>
-
-          {/* Subtitle */}
-          <p className="font-[family-name:var(--font-display)] text-xl md:text-2xl text-[var(--color-text-secondary)] mb-8 animate-fadeInUp-delay-2">
-            The Geometry Behind Your Face.
-          </p>
-
-          {/* Description */}
-          <p className="text-[var(--color-text-muted)] max-w-2xl mx-auto mb-10 leading-relaxed animate-fadeInUp-delay-2">
-            Analyze your facial proportions, symmetry, and classical geometric ratios using
-            computer vision and mathematics. Understand the mathematical structure of your face
-            through transparent, explainable analysis.
-          </p>
-
-          {/* CTA */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16 animate-fadeInUp-delay-3">
-            <Link href="/analyze" className="btn-primary">
-              <span>Analyze Your Face</span>
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style={{ position: 'relative', zIndex: 1 }}>
-                <path d="M7 4L13 10L7 16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </Link>
-            <a href="#how-it-works" className="btn-secondary">
-              Learn More
-            </a>
-          </div>
-
-          {/* Feature cards */}
-          <div id="how-it-works" className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-16 animate-fadeInUp-delay-4">
-            <FeatureCard
-              icon="◇"
-              title="Proportions"
-              description="Face width, height, eye spacing, nose ratios, and more — all normalized and compared."
-              color="var(--color-accent-cyan)"
-            />
-            <FeatureCard
-              icon="⬡"
-              title="Symmetry"
-              description="Bilateral landmark comparison across the facial midline with per-region breakdown."
-              color="var(--color-accent-violet)"
-            />
-            <FeatureCard
-              icon="φ"
-              title="Golden Ratio"
-              description="Measure how close selected facial ratios are to φ ≈ 1.618 — the Golden Ratio."
-              color="var(--color-accent-amber)"
-            />
-          </div>
-
-          {/* Privacy section */}
-          <div id="privacy" className="glass-card-static p-8 max-w-2xl mx-auto mb-16 animate-fadeInUp-delay-4">
-            <div className="flex items-center gap-3 mb-4">
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <rect x="4" y="8" width="12" height="10" rx="2" stroke="#10b981" strokeWidth="1.5" fill="none"/>
-                <path d="M7 8V6C7 4.34 8.34 3 10 3C11.66 3 13 4.34 13 6V8" stroke="#10b981" strokeWidth="1.5" fill="none"/>
-              </svg>
-              <h3 className="font-[family-name:var(--font-display)] font-semibold text-lg">
-                Privacy First
-              </h3>
+              <ul className="mt-9 flex flex-wrap justify-center lg:justify-start gap-x-6 gap-y-2 text-sm text-muted animate-fadeInUp delay-4">
+                {["No sign-up", "Photos never stored", "Results in seconds"].map((t) => (
+                  <li key={t} className="flex items-center gap-2">
+                    <svg width="14" height="14" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                      <path d="M2 6.5l2.5 2.5L10 3.5" stroke="#34d399" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    {t}
+                  </li>
+                ))}
+              </ul>
             </div>
-            <p className="text-sm text-[var(--color-text-muted)] leading-relaxed">
-              Your images are processed in memory and deleted immediately after analysis.
-              No facial photographs are stored on our servers. We do not use uploaded images
-              for model training. Your facial data stays yours.
-            </p>
+
+            <div className="relative mx-auto w-full max-w-[22rem] lg:max-w-none animate-fadeInUp delay-2">
+              <div className="absolute inset-0 -z-10 rounded-full bg-[radial-gradient(circle,rgba(34,211,238,0.25),transparent_65%)] blur-2xl" />
+              <div className="glass-card-static scanner p-6 sm:p-8 animate-float">
+                <FaceMesh className="w-full h-auto" />
+                <div className="mt-4 grid grid-cols-3 gap-2 text-center font-[family-name:var(--font-mono)] text-[11px] text-muted">
+                  <span><b className="block text-[var(--color-accent-cyan)] text-sm">468</b>landmarks</span>
+                  <span><b className="block text-[var(--color-accent-violet)] text-sm">5</b>analyses</span>
+                  <span><b className="block text-[var(--color-accent-amber)] text-sm">φ 1.618</b>reference</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ---------- Features ---------- */}
+        <section id="features" className="section">
+          <div className="container-x">
+            <Reveal className="text-center max-w-2xl mx-auto mb-12 sm:mb-14">
+              <p className="eyebrow mb-3">What we measure</p>
+              <h2 className="text-[length:var(--fs-h2)] font-bold mb-4">Six lenses on facial structure</h2>
+              <p className="text-muted">Each analysis is a deterministic calculation on your landmarks — no black box.</p>
+            </Reveal>
+
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+              {FEATURES.map((f, i) => (
+                <Reveal key={f.title} delay={(i % 3) * 90}>
+                  <article className="glass-card h-full p-6 sm:p-7">
+                    <div
+                      className="w-12 h-12 rounded-2xl grid place-items-center text-xl font-bold mb-5"
+                      style={{ background: `${f.color}1f`, color: f.color, border: `1px solid ${f.color}40` }}
+                    >
+                      {f.icon}
+                    </div>
+                    <h3 className="text-lg font-semibold mb-2">{f.title}</h3>
+                    <p className="text-sm sm:text-[0.95rem] text-muted leading-relaxed">{f.text}</p>
+                  </article>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ---------- How it works ---------- */}
+        <section id="how-it-works" className="section">
+          <div className="container-x">
+            <Reveal className="text-center max-w-2xl mx-auto mb-12 sm:mb-14">
+              <p className="eyebrow mb-3">How it works</p>
+              <h2 className="text-[length:var(--fs-h2)] font-bold">From photo to insight in four steps</h2>
+            </Reveal>
+
+            <ol className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
+              {STEPS.map((s, i) => (
+                <Reveal key={s.n} delay={i * 100}>
+                  <li className="glass-card-static h-full p-6">
+                    <span className="font-[family-name:var(--font-mono)] text-3xl font-bold gradient-text">{s.n}</span>
+                    <h3 className="text-lg font-semibold mt-3 mb-2">{s.title}</h3>
+                    <p className="text-sm text-muted leading-relaxed">{s.text}</p>
+                  </li>
+                </Reveal>
+              ))}
+            </ol>
+          </div>
+        </section>
+
+        {/* ---------- Privacy + CTA ---------- */}
+        <section id="privacy" className="section">
+          <div className="container-x grid lg:grid-cols-2 gap-6">
+            <Reveal>
+              <div className="glass-card-static h-full p-7 sm:p-9">
+                <div className="flex items-center gap-3 mb-4">
+                  <span className="w-10 h-10 rounded-xl grid place-items-center bg-emerald-400/10 border border-emerald-400/30">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                      <rect x="4" y="8" width="12" height="10" rx="2" stroke="#34d399" strokeWidth="1.6" />
+                      <path d="M7 8V6a3 3 0 016 0v2" stroke="#34d399" strokeWidth="1.6" />
+                    </svg>
+                  </span>
+                  <h3 className="text-xl font-semibold">Privacy first</h3>
+                </div>
+                <p className="text-muted leading-relaxed">
+                  Your image is processed in memory and discarded right after analysis. Nothing is
+                  stored, and nothing is used for model training. Your face stays yours.
+                </p>
+              </div>
+            </Reveal>
+
+            <Reveal delay={120}>
+              <div className="glass-card-static h-full p-7 sm:p-9 flex flex-col justify-center items-start gap-5">
+                <h3 className="text-xl sm:text-2xl font-semibold">Ready to see your geometry?</h3>
+                <p className="text-muted">It takes about ten seconds. No account required.</p>
+                <Link href="/analyze" className="btn-primary">Start analysis</Link>
+              </div>
+            </Reveal>
           </div>
 
-          {/* Scientific disclaimer */}
-          <div className="max-w-2xl mx-auto mb-16 px-4">
-            <p className="text-xs text-[var(--color-text-muted)] text-center leading-relaxed border-t border-[var(--color-border)] pt-6">
-              <strong className="text-[var(--color-text-secondary)]">Scientific Note:</strong>{" "}
-              Faceometry is a geometric analysis tool. The Facial Harmony Score represents
-              mathematical measurements of proportions and symmetry — it is not an objective
-              measurement of beauty or attractiveness. Facial geometry varies naturally across
-              individuals and demographics.
+          <Reveal className="container-x mt-10">
+            <p className="max-w-3xl mx-auto text-center text-xs sm:text-sm text-muted leading-relaxed">
+              <strong className="text-soft">Scientific note:</strong> Faceometry is a geometric
+              analysis tool. The Facial Harmony Score reflects measurements of proportion and
+              symmetry — it is not an objective measure of beauty or attractiveness, and facial
+              geometry varies naturally across people and populations.
             </p>
-          </div>
-        </div>
+          </Reveal>
+        </section>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-[var(--color-border)] py-6 px-6">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-[var(--color-text-muted)]">
-            © {new Date().getFullYear()} Faceometry. The Geometry Behind Your Face.
-          </p>
-          <div className="flex items-center gap-6">
-            <Link href="/analyze" className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-accent-cyan)] transition-colors">
-              Analyze
-            </Link>
-          </div>
+      <footer className="border-t border-[var(--color-border)] py-6">
+        <div className="container-x flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted">
+          <p>© {new Date().getFullYear()} Faceometry · The Geometry Behind Your Face.</p>
+          <Link href="/analyze" className="nav-link !text-xs">Analyze</Link>
         </div>
       </footer>
-    </div>
-  );
-}
-
-function FeatureCard({
-  icon,
-  title,
-  description,
-  color,
-}: {
-  icon: string;
-  title: string;
-  description: string;
-  color: string;
-}) {
-  return (
-    <div className="glass-card p-6 text-left">
-      <div
-        className="w-10 h-10 rounded-xl flex items-center justify-center text-xl mb-4"
-        style={{ background: `${color}15`, color }}
-      >
-        {icon}
-      </div>
-      <h3 className="font-[family-name:var(--font-display)] font-semibold mb-2">
-        {title}
-      </h3>
-      <p className="text-sm text-[var(--color-text-muted)] leading-relaxed">
-        {description}
-      </p>
     </div>
   );
 }

@@ -49,7 +49,7 @@ BILATERAL_PAIRS: list[tuple[list[int], list[int], str]] = [
     # Eyes
     (
         [33, 7, 163, 144, 145, 153, 154, 155, 133],     # Left eye
-        [362, 382, 381, 380, 374, 373, 390, 249, 263],   # Right eye
+        [263, 249, 390, 373, 374, 380, 381, 382, 362],   # Right eye (mirror-ordered)
         "eyes",
     ),
     # Eyebrows

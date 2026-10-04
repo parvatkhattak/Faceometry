@@ -1,12 +1,20 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { analyzeImage, ApiError } from "@/lib/api";
-import type { AnalysisResponse } from "@/types/api";
+import { FaceMesh, SiteNav } from "@/components/ui";
 
-type AnalysisState = "idle" | "uploading" | "analyzing" | "error";
+type AnalysisState = "idle" | "analyzing" | "error";
+
+const STEPS = [
+  "Detecting face & landmarks",
+  "Measuring proportions",
+  "Comparing left & right symmetry",
+  "Calculating harmony score",
+];
+
+const TIPS = ["Front-facing photo", "Good, even lighting", "Clear, sharp image", "One person only"];
 
 export default function AnalyzePage() {
   const router = useRouter();
@@ -18,58 +26,58 @@ export default function AnalyzePage() {
   const [error, setError] = useState<string | null>(null);
   const [errorIssues, setErrorIssues] = useState<string[]>([]);
   const [dragOver, setDragOver] = useState(false);
+  const [step, setStep] = useState(0);
+
+  // Advance the loading checklist while analysis is running
+  useEffect(() => {
+    if (state !== "analyzing") return;
+    const id = setInterval(() => setStep((s) => Math.min(s + 1, STEPS.length - 1)), 1100);
+    return () => clearInterval(id);
+  }, [state]);
 
   const handleFile = useCallback((file: File) => {
-    // Client-side validation
     const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
     if (!allowedTypes.includes(file.type)) {
       setError("Please upload a JPEG, PNG, or WebP image.");
+      setErrorIssues([]);
       return;
     }
-
-    const maxSize = 10 * 1024 * 1024; // 10 MB
+    const maxSize = 10 * 1024 * 1024;
     if (file.size > maxSize) {
       setError(`File is too large (${(file.size / (1024 * 1024)).toFixed(1)} MB). Maximum: 10 MB.`);
+      setErrorIssues([]);
       return;
     }
 
     setSelectedFile(file);
     setError(null);
     setErrorIssues([]);
+    setState("idle");
 
-    // Create preview
     const reader = new FileReader();
     reader.onload = (e) => setPreview(e.target?.result as string);
     reader.readAsDataURL(file);
   }, []);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(false);
-    const file = e.dataTransfer.files[0];
-    if (file) handleFile(file);
-  }, [handleFile]);
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(true);
-  }, []);
-
-  const handleDragLeave = useCallback(() => {
-    setDragOver(false);
-  }, []);
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setDragOver(false);
+      const file = e.dataTransfer.files[0];
+      if (file) handleFile(file);
+    },
+    [handleFile]
+  );
 
   const handleAnalyze = async () => {
     if (!selectedFile) return;
-
     setState("analyzing");
+    setStep(0);
     setError(null);
     setErrorIssues([]);
 
     try {
       const result = await analyzeImage(selectedFile);
-
-      // Store result in sessionStorage for the results page
       sessionStorage.setItem("faceometry_result", JSON.stringify(result));
       router.push("/results");
     } catch (err) {
@@ -77,7 +85,7 @@ export default function AnalyzePage() {
         setError(err.message);
         setErrorIssues(err.issues);
       } else {
-        setError("An unexpected error occurred. Please try again.");
+        setError("Can't reach the analysis server. Check your connection and try again.");
       }
       setState("error");
     }
@@ -92,50 +100,71 @@ export default function AnalyzePage() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  const busy = state === "analyzing";
+
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 glass-card-static px-6 py-4"
-           style={{ borderRadius: 0, borderTop: 'none', borderLeft: 'none', borderRight: 'none' }}>
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <svg width="24" height="24" viewBox="0 0 28 28" fill="none">
-              <polygon points="14,2 26,8 26,20 14,26 2,20 2,8" stroke="url(#navG2)" strokeWidth="1.5" fill="none" />
-              <circle cx="14" cy="14" r="4" stroke="url(#navG2)" strokeWidth="1" fill="none" />
-              <defs>
-                <linearGradient id="navG2" x1="0" y1="0" x2="28" y2="28">
-                  <stop offset="0%" stopColor="#00d4ff" />
-                  <stop offset="100%" stopColor="#8b5cf6" />
-                </linearGradient>
-              </defs>
-            </svg>
-            <span className="font-[family-name:var(--font-display)] font-bold tracking-wider">
-              FACEOMETRY
-            </span>
-          </Link>
-        </div>
-      </nav>
+      <SiteNav action={{ href: "/", label: "Home" }} />
 
-      {/* Main content */}
-      <main className="flex-1 flex items-center justify-center pt-24 pb-12 px-6">
-        <div className="w-full max-w-xl mx-auto">
-          <div className="text-center mb-8 animate-fadeInUp">
-            <h1 className="font-[family-name:var(--font-display)] text-3xl md:text-4xl font-bold mb-2">
-              <span className="gradient-text">Analyze Your Face</span>
+      <main className="flex-1 container-x pt-24 sm:pt-32 pb-14">
+        <div className="mx-auto w-full max-w-2xl">
+          <header className="text-center mb-8 sm:mb-10 animate-fadeInUp">
+            <p className="eyebrow mb-3">Step 1 of 2</p>
+            <h1 className="text-[length:var(--fs-h1)] font-bold mb-3">
+              <span className="gradient-text">Analyze your face</span>
             </h1>
-            <p className="text-[var(--color-text-muted)] text-sm">
-              Upload a front-facing photograph to analyze facial geometry and proportions.
+            <p className="text-muted max-w-md mx-auto">
+              Upload a front-facing photograph to measure your facial geometry and proportions.
             </p>
-          </div>
+          </header>
 
-          {/* Upload zone */}
+          {/* Error banner (also shown before a file is selected) */}
+          {error && (
+            <div
+              role="alert"
+              className="mb-5 rounded-2xl border border-rose-400/35 bg-rose-400/[0.07] p-4 sm:p-5 animate-fadeInUp"
+            >
+              <div className="flex items-start gap-3">
+                <svg width="20" height="20" viewBox="0 0 18 18" fill="none" className="mt-0.5 shrink-0" aria-hidden="true">
+                  <circle cx="9" cy="9" r="8" stroke="#fb7185" strokeWidth="1.5" />
+                  <path d="M9 5v5M9 12.5v.5" stroke="#fb7185" strokeWidth="1.6" strokeLinecap="round" />
+                </svg>
+                <div className="min-w-0">
+                  <p className="font-medium text-rose-300">{error}</p>
+                  {errorIssues.length > 0 && (
+                    <ul className="mt-2 space-y-1.5">
+                      {errorIssues.map((issue, i) => (
+                        <li key={i} className="text-sm text-soft flex gap-2">
+                          <span className="text-rose-300">•</span>
+                          <span>{issue}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {!preview ? (
             <div
-              className={`upload-zone animate-fadeInUp-delay-1 ${dragOver ? "drag-over" : ""}`}
+              role="button"
+              tabIndex={0}
+              aria-label="Upload a photo"
+              className={`upload-zone animate-fadeInUp delay-1 ${dragOver ? "drag-over" : ""}`}
               onDrop={handleDrop}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragOver(true);
+              }}
+              onDragLeave={() => setDragOver(false)}
               onClick={() => fileInputRef.current?.click()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  fileInputRef.current?.click();
+                }
+              }}
             >
               <input
                 ref={fileInputRef}
@@ -148,157 +177,111 @@ export default function AnalyzePage() {
                 }}
               />
 
-              <div className="mb-4">
-                <svg width="48" height="48" viewBox="0 0 48 48" fill="none" className="mx-auto opacity-40">
-                  <rect x="6" y="10" width="36" height="28" rx="4" stroke="currentColor" strokeWidth="1.5" fill="none" />
-                  <circle cx="18" cy="22" r="4" stroke="currentColor" strokeWidth="1.5" fill="none" />
-                  <path d="M6 34L16 26L22 30L32 20L42 28" stroke="currentColor" strokeWidth="1.5" fill="none" />
-                  <path d="M24 4V14M19 9L24 4L29 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+              <div className="mx-auto mb-5 w-16 h-16 rounded-2xl grid place-items-center bg-cyan-400/10 border border-cyan-400/25 animate-float">
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M12 16V4M7 9l5-5 5 5" />
+                  <path d="M4 15v3a2 2 0 002 2h12a2 2 0 002-2v-3" />
                 </svg>
               </div>
 
-              <p className="font-[family-name:var(--font-display)] font-semibold mb-1">
+              <p className="font-[family-name:var(--font-display)] text-lg sm:text-xl font-semibold mb-1">
                 Drop your photo here
               </p>
-              <p className="text-sm text-[var(--color-text-muted)] mb-3">
-                or click to browse
+              <p className="text-soft mb-4">
+                or <span className="text-[var(--color-accent-cyan)] underline underline-offset-4">browse files</span>
               </p>
-              <p className="text-xs text-[var(--color-text-muted)]">
-                JPEG, PNG, or WebP · Max 10 MB · Front-facing photo recommended
-              </p>
+              <p className="text-xs sm:text-sm text-muted">JPEG, PNG or WebP · up to 10 MB</p>
             </div>
           ) : (
-            /* Preview + Analyze */
             <div className="animate-fadeInUp">
-              <div className="glass-card-static overflow-hidden mb-4">
-                <div className="relative aspect-[4/5] max-h-[400px] overflow-hidden flex items-center justify-center bg-black/20">
-                  <img
-                    src={preview}
-                    alt="Preview"
-                    className="max-w-full max-h-full object-contain"
-                  />
-                  {state === "analyzing" && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-                      <div className="text-center">
-                        <LoadingSpinner />
-                        <p className="mt-4 font-[family-name:var(--font-display)] text-sm">
-                          Analyzing facial geometry...
-                        </p>
-                        <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                          Detecting landmarks · Measuring proportions · Calculating scores
-                        </p>
+              <div className="glass-card-static overflow-hidden mb-5">
+                <div className={`relative flex items-center justify-center bg-black/30 h-[min(60vh,28rem)] ${busy ? "scanner" : ""}`}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={preview} alt="Selected photo preview" className="max-w-full max-h-full object-contain" />
+
+                  {busy && (
+                    <div className="absolute inset-0 bg-black/55 backdrop-blur-[2px] grid place-items-center p-4">
+                      <div className="w-full max-w-xs text-center">
+                        <FaceMesh className="w-20 h-20 mx-auto mb-4 animate-float" />
+                        <ul className="text-left space-y-2.5">
+                          {STEPS.map((label, i) => (
+                            <li
+                              key={label}
+                              className={`flex items-center gap-3 text-sm transition-colors duration-300 ${
+                                i <= step ? "text-white" : "text-muted"
+                              }`}
+                              style={i === step ? { animation: "step-in .4s ease both" } : undefined}
+                            >
+                              <span className="w-5 h-5 grid place-items-center shrink-0">
+                                {i < step ? (
+                                  <svg width="16" height="16" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                                    <path d="M2 6.5l2.5 2.5L10 3.5" stroke="#34d399" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                                  </svg>
+                                ) : i === step ? (
+                                  <span className="w-3 h-3 rounded-full border-2 border-cyan-300 border-t-transparent animate-spin" />
+                                ) : (
+                                  <span className="w-1.5 h-1.5 rounded-full bg-white/25" />
+                                )}
+                              </span>
+                              {label}
+                            </li>
+                          ))}
+                        </ul>
                       </div>
                     </div>
                   )}
                 </div>
 
-                <div className="p-4 border-t border-[var(--color-border)]">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium truncate max-w-[200px]">{selectedFile?.name}</p>
-                      <p className="text-xs text-[var(--color-text-muted)]">
-                        {selectedFile && (selectedFile.size / (1024 * 1024)).toFixed(2)} MB
-                      </p>
-                    </div>
-                    <button
-                      onClick={handleReset}
-                      className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-accent-rose)] transition-colors"
-                      disabled={state === "analyzing"}
-                    >
-                      Remove
-                    </button>
+                <div className="p-4 sm:p-5 border-t border-[var(--color-border)] flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{selectedFile?.name}</p>
+                    <p className="text-xs text-muted">
+                      {selectedFile && (selectedFile.size / (1024 * 1024)).toFixed(2)} MB
+                    </p>
                   </div>
+                  <button
+                    type="button"
+                    onClick={handleReset}
+                    disabled={busy}
+                    className="text-sm text-muted hover:text-rose-300 transition-colors disabled:opacity-40 shrink-0"
+                  >
+                    Remove
+                  </button>
                 </div>
               </div>
 
-              {/* Error display */}
-              {error && (
-                <div className="glass-card-static p-4 mb-4 border-[var(--color-accent-rose)]" style={{ borderColor: 'rgba(244, 63, 94, 0.3)' }}>
-                  <div className="flex items-start gap-3">
-                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" className="mt-0.5 flex-shrink-0">
-                      <circle cx="9" cy="9" r="8" stroke="#f43f5e" strokeWidth="1.5" fill="none" />
-                      <path d="M9 5V10M9 12.5V13" stroke="#f43f5e" strokeWidth="1.5" strokeLinecap="round" />
-                    </svg>
-                    <div>
-                      <p className="text-sm text-[var(--color-accent-rose)] font-medium">{error}</p>
-                      {errorIssues.length > 0 && (
-                        <ul className="mt-2 space-y-1">
-                          {errorIssues.map((issue, i) => (
-                            <li key={i} className="text-xs text-[var(--color-text-muted)]">• {issue}</li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Actions */}
-              <div className="flex gap-3">
-                <button
-                  onClick={handleAnalyze}
-                  disabled={state === "analyzing"}
-                  className="btn-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-                >
-                  <span>{state === "analyzing" ? "Analyzing..." : "Analyze"}</span>
+              <div className="flex flex-col-reverse sm:flex-row gap-3">
+                <button type="button" onClick={handleReset} disabled={busy} className="btn-secondary sm:w-auto">
+                  Choose another
                 </button>
-                <button
-                  onClick={handleReset}
-                  disabled={state === "analyzing"}
-                  className="btn-secondary disabled:opacity-50"
-                >
-                  Reset
+                <button type="button" onClick={handleAnalyze} disabled={busy} className="btn-primary flex-1">
+                  {busy ? "Analyzing…" : "Analyze photo"}
                 </button>
               </div>
             </div>
           )}
 
           {/* Tips */}
-          <div className="mt-8 animate-fadeInUp-delay-3">
-            <p className="text-xs text-[var(--color-text-muted)] text-center mb-3 font-[family-name:var(--font-display)]">
-              For best results:
+          <section className="mt-10 animate-fadeInUp delay-3" aria-label="Tips for best results">
+            <p className="text-sm text-soft text-center mb-4 font-[family-name:var(--font-display)]">
+              For the most accurate results
             </p>
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                "Front-facing photo",
-                "Good lighting",
-                "Clear, sharp image",
-                "One person only",
-              ].map((tip) => (
-                <div
-                  key={tip}
-                  className="flex items-center gap-2 text-xs text-[var(--color-text-muted)] glass-card-static px-3 py-2"
-                >
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                    <path d="M2 6L5 9L10 3" stroke="#10b981" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            <ul className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-3">
+              {TIPS.map((tip) => (
+                <li key={tip} className="glass-card-static flex items-center gap-3 px-4 py-3 text-sm text-soft">
+                  <svg width="14" height="14" viewBox="0 0 12 12" fill="none" className="shrink-0" aria-hidden="true">
+                    <path d="M2 6.5l2.5 2.5L10 3.5" stroke="#34d399" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                   {tip}
-                </div>
+                </li>
               ))}
-            </div>
-          </div>
+            </ul>
+            <p className="mt-6 text-xs text-muted text-center">
+              🔒 Your photo is processed in memory and never stored.
+            </p>
+          </section>
         </div>
       </main>
     </div>
-  );
-}
-
-function LoadingSpinner() {
-  return (
-    <svg width="48" height="48" viewBox="0 0 48 48" className="animate-spin">
-      <circle cx="24" cy="24" r="20" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="3" />
-      <circle
-          cx="24" cy="24" r="20" fill="none"
-          stroke="url(#spinGrad)" strokeWidth="3"
-          strokeLinecap="round"
-          strokeDasharray="80 50"
-        />
-      <defs>
-        <linearGradient id="spinGrad" x1="0" y1="0" x2="48" y2="48">
-          <stop offset="0%" stopColor="#00d4ff" />
-          <stop offset="100%" stopColor="#8b5cf6" />
-        </linearGradient>
-      </defs>
-    </svg>
   );
 }

@@ -17,15 +17,15 @@ class TestGoldenRatio:
         """If all configured ratios equal φ, overall score should be very high."""
         # Set values so every configured ratio ≈ φ:
         # face_height/face_width = φ → face_width = 1/φ
-        # face_width/inter_eye = φ → inter_eye = face_width/φ = 1/φ²
+        # mouth_width/inter_eye = φ → inter_eye = mouth_width/φ
         # nose_length/nose_width = φ → nose_width = nose_length/φ
         # mouth_width/nose_width = φ → mouth_width = nose_width * φ = nose_length
         # face_height/hairline_to_nose = φ → hairline_to_nose = 1/φ
         fw = 1.0 / PHI
-        ie = fw / PHI
         nl = 0.3
         nw = nl / PHI
         mw = nw * PHI  # = nl
+        ie = mw / PHI
         htn = 1.0 / PHI
         measurements = MeasurementResult(
             face_height=1.0,

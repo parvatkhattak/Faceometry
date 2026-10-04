@@ -25,7 +25,7 @@ class ImageValidationSettings(BaseSettings):
 
     # Blur detection (Laplacian variance)
     blur_threshold: float = Field(
-        default=50.0,
+        default=30.0,
         description="Images with Laplacian variance below this are considered too blurry.",
     )
 
@@ -84,7 +84,7 @@ class GoldenRatioSettings(BaseSettings):
     # These reference measurement keys from the geometry engine.
     analyzed_ratios: list[dict[str, str]] = [
         {"name": "Face Height / Face Width", "numerator": "face_height", "denominator": "face_width"},
-        {"name": "Face Width / Inter-Eye Distance", "numerator": "face_width", "denominator": "inter_eye_distance"},
+        {"name": "Mouth Width / Inter-Eye Distance", "numerator": "mouth_width", "denominator": "inter_eye_distance"},
         {"name": "Nose Length / Nose Width", "numerator": "nose_length", "denominator": "nose_width"},
         {"name": "Mouth Width / Nose Width", "numerator": "mouth_width", "denominator": "nose_width"},
         {"name": "Face Height / Hairline-to-Nose", "numerator": "face_height", "denominator": "hairline_to_nose_base"},

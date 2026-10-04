@@ -1,378 +1,348 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { AnalysisResponse } from "@/types/api";
+import { CountUp, Reveal, SiteNav } from "@/components/ui";
+
+const noopSubscribe = () => () => {};
+
+/** Score → label + colours */
+function band(score: number) {
+  if (score >= 85) return { label: "Highly balanced", colors: ["#34d399", "#22d3ee"] };
+  if (score >= 70) return { label: "Well balanced", colors: ["#22d3ee", "#a78bfa"] };
+  if (score >= 50) return { label: "Moderately balanced", colors: ["#fbbf24", "#fb7185"] };
+  return { label: "Lower balance", colors: ["#fb7185", "#e11d48"] };
+}
 
 export default function ResultsPage() {
   const router = useRouter();
-  const [result, setResult] = useState<AnalysisResponse | null>(null);
-  const [mounted, setMounted] = useState(false);
+  const stored = useSyncExternalStore(
+    noopSubscribe,
+    () => sessionStorage.getItem("faceometry_result") ?? "",
+    () => null
+  );
+  const result = useMemo<AnalysisResponse | null>(() => {
+    if (!stored) return null;
+    try {
+      return JSON.parse(stored);
+    } catch {
+      return null;
+    }
+  }, [stored]);
 
   useEffect(() => {
-    const stored = sessionStorage.getItem("faceometry_result");
-    if (!stored) {
-      router.push("/analyze");
-      return;
-    }
-    try {
-      setResult(JSON.parse(stored));
-      setMounted(true);
-    } catch {
-      router.push("/analyze");
-    }
-  }, [router]);
+    if (stored !== null && !result) router.push("/analyze");
+  }, [stored, result, router]);
 
-  if (!result || !mounted) {
+  if (!result) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen grid place-items-center">
         <div className="text-center">
-          <div className="animate-spin w-8 h-8 border-2 border-[var(--color-accent-cyan)] border-t-transparent rounded-full mx-auto mb-4" />
-          <p className="text-sm text-[var(--color-text-muted)]">Loading results...</p>
+          <div className="w-9 h-9 rounded-full border-2 border-cyan-300 border-t-transparent animate-spin mx-auto mb-4" />
+          <p className="text-sm text-muted">Loading results…</p>
         </div>
       </div>
     );
   }
 
   const { scores, measurements, golden_ratio_analysis, symmetry_analysis, facial_thirds, facial_fifths, explanations, landmark_image_base64, face } = result;
+  const harmonyBand = band(scores.harmony);
+
+  const subScores = [
+    { title: "Symmetry", score: scores.symmetry, color: "#22d3ee", weight: "35%" },
+    { title: "Proportion", score: scores.proportion, color: "#a78bfa", weight: "25%" },
+    { title: "Golden ratio", score: scores.golden_ratio, color: "#fbbf24", weight: "20%" },
+    { title: "Facial thirds", score: scores.facial_thirds, color: "#34d399", weight: "10%" },
+    { title: "Facial fifths", score: scores.facial_fifths, color: "#fb7185", weight: "10%" },
+  ];
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 glass-card-static px-6 py-4"
-           style={{ borderRadius: 0, borderTop: 'none', borderLeft: 'none', borderRight: 'none' }}>
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <svg width="24" height="24" viewBox="0 0 28 28" fill="none">
-              <polygon points="14,2 26,8 26,20 14,26 2,20 2,8" stroke="url(#rNav)" strokeWidth="1.5" fill="none" />
-              <circle cx="14" cy="14" r="4" stroke="url(#rNav)" strokeWidth="1" fill="none" />
-              <defs>
-                <linearGradient id="rNav" x1="0" y1="0" x2="28" y2="28">
-                  <stop offset="0%" stopColor="#00d4ff" />
-                  <stop offset="100%" stopColor="#8b5cf6" />
-                </linearGradient>
-              </defs>
-            </svg>
-            <span className="font-[family-name:var(--font-display)] font-bold tracking-wider">FACEOMETRY</span>
-          </Link>
-          <Link href="/analyze" className="btn-secondary text-xs">
-            New Analysis
-          </Link>
-        </div>
-      </nav>
+      <SiteNav action={{ href: "/analyze", label: "New analysis" }} />
 
-      {/* Results */}
-      <main className="flex-1 pt-24 pb-16 px-6">
-        <div className="max-w-6xl mx-auto">
+      <main className="flex-1 container-x pt-24 sm:pt-32 pb-16">
+        {/* Header */}
+        <header className="text-center mb-10 sm:mb-14 animate-fadeInUp">
+          <p className="eyebrow mb-3">Analysis complete</p>
+          <h1 className="text-[length:var(--fs-h1)] font-bold">
+            Your <span className="gradient-text">facial geometry</span> results
+          </h1>
+        </header>
 
-          {/* Header */}
-          <div className="text-center mb-12 animate-fadeInUp">
-            <p className="text-xs font-[family-name:var(--font-mono)] text-[var(--color-accent-cyan)] tracking-[0.3em] uppercase mb-2">
-              Analysis Complete
+        {/* Hero: score + photo */}
+        <section className="grid lg:grid-cols-[0.9fr_1.1fr] gap-5 sm:gap-6 mb-6">
+          <div className="glass-card-static p-6 sm:p-10 flex flex-col items-center justify-center text-center animate-fadeInUp delay-1">
+            <p className="eyebrow !text-[var(--color-text-muted)] mb-6">Facial harmony score</p>
+            <ScoreRing score={scores.harmony} colors={harmonyBand.colors} />
+            <p
+              className="mt-6 inline-block rounded-full px-4 py-1.5 text-sm font-medium border"
+              style={{ color: harmonyBand.colors[0], borderColor: `${harmonyBand.colors[0]}55`, background: `${harmonyBand.colors[0]}14` }}
+            >
+              {harmonyBand.label}
             </p>
-            <h1 className="font-[family-name:var(--font-display)] text-3xl md:text-4xl font-bold">
-              Your <span className="gradient-text">Facial Geometry</span> Results
-            </h1>
+            <p className="mt-4 text-sm text-muted max-w-xs leading-relaxed">
+              Combines symmetry, proportions, golden-ratio proximity, thirds and fifths.
+            </p>
           </div>
 
-          {/* Main Score + Face */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            {/* Harmony Score */}
-            <div className="glass-card p-8 flex flex-col items-center justify-center animate-fadeInUp-delay-1">
-              <p className="text-xs font-[family-name:var(--font-mono)] text-[var(--color-text-muted)] tracking-wider uppercase mb-6">
-                Facial Harmony Score
-              </p>
-              <ScoreRing score={scores.harmony} size={180} />
-              <p className="mt-6 text-sm text-[var(--color-text-muted)] max-w-xs text-center leading-relaxed">
-                Based on symmetry, proportions, golden ratio proximity, facial thirds, and fifths.
-              </p>
-            </div>
+          <div className="glass-card-static p-4 sm:p-6 flex items-center justify-center animate-fadeInUp delay-2">
+            {landmark_image_base64 ? (
+              <figure className="relative w-full">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={landmark_image_base64}
+                  alt="Your photo with detected facial landmarks"
+                  className="w-full max-h-[28rem] object-contain rounded-2xl bg-black/30"
+                />
+                <figcaption className="mt-3 sm:mt-0 sm:absolute sm:bottom-3 sm:left-3 glass-card-static !rounded-xl px-3 py-1.5 text-[11px] sm:text-xs font-[family-name:var(--font-mono)] text-soft w-fit">
+                  yaw {face.pose.yaw.toFixed(1)}° · pitch {face.pose.pitch.toFixed(1)}° · roll {face.pose.roll.toFixed(1)}°
+                </figcaption>
+              </figure>
+            ) : (
+              <p className="text-sm text-muted py-16">Landmark image not available</p>
+            )}
+          </div>
+        </section>
 
-            {/* Face with landmarks */}
-            <div className="glass-card p-6 flex items-center justify-center animate-fadeInUp-delay-2">
-              {landmark_image_base64 ? (
-                <div className="relative">
-                  <img
-                    src={landmark_image_base64}
-                    alt="Face with landmark annotations"
-                    className="max-w-full max-h-[360px] object-contain rounded-lg"
-                  />
-                  <div className="absolute bottom-2 left-2 glass-card-static px-3 py-1.5 text-xs">
-                    <span className="text-[var(--color-text-muted)]">Pose: </span>
-                    <span className="font-[family-name:var(--font-mono)]">
-                      {face.pose.yaw.toFixed(1)}° yaw · {face.pose.pitch.toFixed(1)}° pitch · {face.pose.roll.toFixed(1)}° roll
-                    </span>
-                  </div>
+        {/* Sub-scores */}
+        <section className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mb-6" aria-label="Score breakdown">
+          {subScores.map((s, i) => (
+            <Reveal key={s.title} delay={i * 70} className={i === 4 ? "col-span-2 sm:col-span-1" : ""}>
+              <div className="glass-card h-full p-4 sm:p-5 text-center">
+                <p className="text-xs uppercase tracking-wider text-muted mb-2">{s.title}</p>
+                <p className="font-[family-name:var(--font-display)] text-3xl sm:text-4xl font-bold" style={{ color: s.color }}>
+                  <CountUp value={s.score} delay={400 + i * 90} />
+                </p>
+                <div className="mt-3 h-1.5 rounded-full bg-white/10 overflow-hidden">
+                  <div className="bar-x h-full rounded-full" style={{ width: `${s.score}%`, background: s.color, ["--bar-delay" as string]: `${0.3 + i * 0.08}s` }} />
                 </div>
-              ) : (
-                <p className="text-sm text-[var(--color-text-muted)]">Landmark image not available</p>
-              )}
-            </div>
-          </div>
+                <p className="mt-2 text-[11px] text-muted">weight {s.weight}</p>
+              </div>
+            </Reveal>
+          ))}
+        </section>
 
-          {/* Sub-scores grid */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8 animate-fadeInUp-delay-2">
-            <SubScoreCard title="Symmetry" score={scores.symmetry} color="#00d4ff" />
-            <SubScoreCard title="Proportion" score={scores.proportion} color="#8b5cf6" />
-            <SubScoreCard title="Golden Ratio" score={scores.golden_ratio} color="#f59e0b" />
-            <SubScoreCard title="Thirds" score={scores.facial_thirds} color="#10b981" />
-            <SubScoreCard title="Fifths" score={scores.facial_fifths} color="#f43f5e" />
-          </div>
-
-          {/* Explanations */}
-          <div className="glass-card p-6 mb-8 animate-fadeInUp-delay-3">
-            <h2 className="font-[family-name:var(--font-display)] font-semibold text-lg mb-4 flex items-center gap-2">
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                <circle cx="9" cy="9" r="8" stroke="#00d4ff" strokeWidth="1.5" fill="none" />
-                <path d="M9 5V10M9 12.5V13" stroke="#00d4ff" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
-              Score Explanations
-            </h2>
-            <div className="space-y-4">
+        {/* Explanations */}
+        <Reveal className="mb-6">
+          <section className="glass-card-static p-5 sm:p-8">
+            <h2 className="text-xl font-semibold mb-5">What your scores mean</h2>
+            <ul className="divide-y divide-[var(--color-border)]">
               {explanations.map((exp) => (
-                <div key={exp.component} className="flex items-start gap-4 py-3 border-b border-[var(--color-border)] last:border-0">
-                  <div className="flex-shrink-0 w-14 text-right">
-                    <span className="font-[family-name:var(--font-mono)] text-sm font-bold gradient-text-score">
-                      {exp.score.toFixed(0)}
-                    </span>
+                <li key={exp.component} className="flex items-start gap-4 sm:gap-5 py-4 first:pt-0 last:pb-0">
+                  <span className="shrink-0 w-12 sm:w-14 text-center font-[family-name:var(--font-display)] text-2xl font-bold gradient-text-score">
+                    {exp.score.toFixed(0)}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="font-medium mb-0.5">{exp.component}</p>
+                    <p className="text-sm text-muted leading-relaxed">{exp.explanation}</p>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium mb-0.5">{exp.component}</p>
-                    <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">{exp.explanation}</p>
-                  </div>
-                </div>
+                </li>
               ))}
-            </div>
-          </div>
+            </ul>
+          </section>
+        </Reveal>
 
-          {/* Detailed analysis grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            {/* Symmetry Details */}
-            <div className="glass-card p-6 animate-fadeInUp-delay-3">
-              <h3 className="font-[family-name:var(--font-display)] font-semibold mb-4">Symmetry Analysis</h3>
-              <div className="space-y-3">
-                {symmetry_analysis.details.map((d) => (
-                  <div key={d.region} className="flex items-center gap-3">
-                    <span className="text-xs text-[var(--color-text-muted)] capitalize w-20">{d.region}</span>
-                    <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
+        {/* Symmetry + Golden ratio */}
+        <section className="grid lg:grid-cols-2 gap-5 sm:gap-6 mb-6">
+          <Reveal>
+            <div className="glass-card-static h-full p-5 sm:p-8">
+              <h2 className="text-xl font-semibold mb-1">Symmetry by region</h2>
+              <p className="text-sm text-muted mb-6">How closely each side mirrors the other.</p>
+              <ul className="space-y-4">
+                {symmetry_analysis.details.map((d, i) => (
+                  <li key={d.region} className="grid grid-cols-[5.5rem_1fr_2.5rem] sm:grid-cols-[6.5rem_1fr_2.5rem] items-center gap-3">
+                    <span className="text-sm text-soft capitalize">{d.region}</span>
+                    <div className="h-2.5 rounded-full bg-white/10 overflow-hidden">
                       <div
-                        className="h-full rounded-full transition-all duration-1000"
-                        style={{
-                          width: `${d.score}%`,
-                          background: `linear-gradient(90deg, #00d4ff, #8b5cf6)`,
-                        }}
+                        className="bar-x h-full rounded-full"
+                        style={{ width: `${d.score}%`, background: "linear-gradient(90deg,#22d3ee,#a78bfa)", ["--bar-delay" as string]: `${0.2 + i * 0.08}s` }}
                       />
                     </div>
-                    <span className="text-xs font-[family-name:var(--font-mono)] w-10 text-right">{d.score.toFixed(0)}</span>
-                  </div>
+                    <span className="text-sm font-[family-name:var(--font-mono)] text-right">{d.score.toFixed(0)}</span>
+                  </li>
                 ))}
-              </div>
+              </ul>
             </div>
+          </Reveal>
 
-            {/* Golden Ratio Details */}
-            <div className="glass-card p-6 animate-fadeInUp-delay-3">
-              <h3 className="font-[family-name:var(--font-display)] font-semibold mb-4">
-                Golden Ratio Analysis <span className="text-[var(--color-accent-amber)] text-sm">φ ≈ 1.618</span>
-              </h3>
-              <div className="space-y-3">
-                {golden_ratio_analysis.ratios.map((r) => (
-                  <div key={r.name} className="glass-card-static p-3">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs text-[var(--color-text-secondary)]">{r.name}</span>
-                      <span className="text-xs font-[family-name:var(--font-mono)] text-[var(--color-accent-amber)]">
-                        {r.score.toFixed(0)}/100
+          <Reveal delay={100}>
+            <div className="glass-card-static h-full p-5 sm:p-8">
+              <h2 className="text-xl font-semibold mb-1">
+                Golden ratio <span className="text-[var(--color-accent-amber)] text-base font-normal">φ ≈ 1.618</span>
+              </h2>
+              <p className="text-sm text-muted mb-6">Selected ratios compared against φ.</p>
+              <ul className="space-y-3">
+                {golden_ratio_analysis.ratios.map((r, i) => (
+                  <li key={r.name} className="rounded-2xl border border-[var(--color-border)] bg-white/[0.02] p-4">
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                      <span className="text-sm text-soft">{r.name}</span>
+                      <span className="shrink-0 text-sm font-[family-name:var(--font-mono)] text-[var(--color-accent-amber)]">
+                        {r.score.toFixed(0)}<span className="text-muted">/100</span>
                       </span>
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-[var(--color-text-muted)]">
-                      <span>Value: <span className="font-[family-name:var(--font-mono)]">{r.value.toFixed(3)}</span></span>
-                      <span>Target: <span className="font-[family-name:var(--font-mono)]">{r.target.toFixed(3)}</span></span>
-                      <span>Dev: <span className="font-[family-name:var(--font-mono)]">{(r.deviation * 100).toFixed(1)}%</span></span>
+                    <div className="h-1.5 rounded-full bg-white/10 overflow-hidden mb-2.5">
+                      <div className="bar-x h-full rounded-full bg-[var(--color-accent-amber)]" style={{ width: `${r.score}%`, ["--bar-delay" as string]: `${0.2 + i * 0.08}s` }} />
                     </div>
-                  </div>
+                    <dl className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted font-[family-name:var(--font-mono)]">
+                      <div><dt className="inline">value </dt><dd className="inline text-soft">{r.value.toFixed(3)}</dd></div>
+                      <div><dt className="inline">target </dt><dd className="inline text-soft">{r.target.toFixed(3)}</dd></div>
+                      <div><dt className="inline">dev </dt><dd className="inline text-soft">{(r.deviation * 100).toFixed(1)}%</dd></div>
+                    </dl>
+                  </li>
                 ))}
-              </div>
+              </ul>
             </div>
-          </div>
+          </Reveal>
+        </section>
 
-          {/* Thirds & Fifths */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            {/* Facial Thirds */}
-            <div className="glass-card p-6 animate-fadeInUp-delay-4">
-              <h3 className="font-[family-name:var(--font-display)] font-semibold mb-4">
-                Facial Thirds
-                <span className="text-xs text-[var(--color-text-muted)] ml-2">Vertical proportions</span>
-              </h3>
-              <div className="flex gap-2 h-32 items-end mb-4">
-                <ThirdBar label="Upper" value={facial_thirds.upper_third} color="#00d4ff" />
-                <ThirdBar label="Middle" value={facial_thirds.middle_third} color="#8b5cf6" />
-                <ThirdBar label="Lower" value={facial_thirds.lower_third} color="#f43f5e" />
+        {/* Thirds + Fifths */}
+        <section className="grid lg:grid-cols-2 gap-5 sm:gap-6 mb-6">
+          <Reveal>
+            <div className="glass-card-static h-full p-5 sm:p-8">
+              <h2 className="text-xl font-semibold mb-1">Facial thirds</h2>
+              <p className="text-sm text-muted mb-6">Vertical proportions · reference 33.3% each</p>
+              <div className="flex gap-3 sm:gap-4 h-44 items-end mb-5">
+                <Column label="Upper" value={facial_thirds.upper_third} max={0.5} color="#22d3ee" delay={0.2} />
+                <Column label="Middle" value={facial_thirds.middle_third} max={0.5} color="#a78bfa" delay={0.3} />
+                <Column label="Lower" value={facial_thirds.lower_third} max={0.5} color="#fb7185" delay={0.4} />
               </div>
-              <div className="flex items-center justify-between text-xs text-[var(--color-text-muted)]">
-                <span>Score: <span className="font-[family-name:var(--font-mono)] text-[var(--color-text-secondary)]">{facial_thirds.score.toFixed(0)}/100</span></span>
-                <span>Reference: 33.3% each</span>
-              </div>
+              <p className="text-sm text-muted">
+                Score <span className="font-[family-name:var(--font-mono)] text-soft">{facial_thirds.score.toFixed(0)}/100</span>
+              </p>
             </div>
+          </Reveal>
 
-            {/* Facial Fifths */}
-            <div className="glass-card p-6 animate-fadeInUp-delay-4">
-              <h3 className="font-[family-name:var(--font-display)] font-semibold mb-4">
-                Facial Fifths
-                <span className="text-xs text-[var(--color-text-muted)] ml-2">Horizontal proportions</span>
-              </h3>
-              <div className="flex gap-1 h-16 items-end mb-4">
+          <Reveal delay={100}>
+            <div className="glass-card-static h-full p-5 sm:p-8">
+              <h2 className="text-xl font-semibold mb-1">Facial fifths</h2>
+              <p className="text-sm text-muted mb-6">Horizontal proportions · reference 20% each</p>
+              <div className="flex gap-2 sm:gap-3 h-44 items-end mb-5">
                 {facial_fifths.sections.map((s, i) => {
-                  const colors = ["#f43f5e", "#00d4ff", "#8b5cf6", "#00d4ff", "#f43f5e"];
-                  const labels = ["Left", "L Eye", "Inter", "R Eye", "Right"];
-                  return (
-                    <div
-                      key={i}
-                      className="flex-1 rounded-t-lg relative group"
-                      style={{
-                        height: `${Math.max(20, s * 100 * 3)}%`,
-                        background: `linear-gradient(180deg, ${colors[i]}, ${colors[i]}44)`,
-                      }}
-                    >
-                      <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-[var(--color-text-muted)] whitespace-nowrap">
-                        {labels[i]}
-                      </div>
-                      <div className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-[family-name:var(--font-mono)]">
-                        {(s * 100).toFixed(0)}%
-                      </div>
-                    </div>
-                  );
+                  const colors = ["#fb7185", "#22d3ee", "#a78bfa", "#22d3ee", "#fb7185"];
+                  const labels = ["Left", "L eye", "Between", "R eye", "Right"];
+                  return <Column key={i} label={labels[i]} value={s} max={0.35} color={colors[i]} delay={0.2 + i * 0.07} small />;
                 })}
               </div>
-              <div className="flex items-center justify-between text-xs text-[var(--color-text-muted)] mt-8">
-                <span>Score: <span className="font-[family-name:var(--font-mono)] text-[var(--color-text-secondary)]">{facial_fifths.score.toFixed(0)}/100</span></span>
-                <span>Reference: 20% each</span>
-              </div>
+              <p className="text-sm text-muted">
+                Score <span className="font-[family-name:var(--font-mono)] text-soft">{facial_fifths.score.toFixed(0)}/100</span>
+              </p>
             </div>
-          </div>
+          </Reveal>
+        </section>
 
-          {/* Measurements table */}
-          <div className="glass-card p-6 mb-8 animate-fadeInUp-delay-4">
-            <h3 className="font-[family-name:var(--font-display)] font-semibold mb-4">
-              Measurements
-              <span className="text-xs text-[var(--color-text-muted)] ml-2">Normalized by face height</span>
-            </h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+        {/* Measurements */}
+        <Reveal className="mb-10">
+          <section className="glass-card-static p-5 sm:p-8">
+            <h2 className="text-xl font-semibold mb-1">Measurements</h2>
+            <p className="text-sm text-muted mb-6">All distances normalized by face height.</p>
+            <dl className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
               {Object.entries(measurements).map(([key, value]) => (
-                <div key={key} className="glass-card-static p-3">
-                  <p className="text-[10px] text-[var(--color-text-muted)] uppercase tracking-wider mb-1">
-                    {key.replace(/_/g, " ")}
-                  </p>
-                  <p className="font-[family-name:var(--font-mono)] text-sm">
-                    {typeof value === 'number' ? value.toFixed(4) : value}
-                  </p>
+                <div key={key} className="rounded-2xl border border-[var(--color-border)] bg-white/[0.02] p-3.5 sm:p-4">
+                  <dt className="text-[11px] uppercase tracking-wider text-muted mb-1.5 leading-snug">{key.replace(/_/g, " ")}</dt>
+                  <dd className="font-[family-name:var(--font-mono)] text-base sm:text-lg">
+                    {typeof value === "number" ? value.toFixed(3) : value}
+                  </dd>
                 </div>
               ))}
-            </div>
-          </div>
+            </dl>
+          </section>
+        </Reveal>
 
-          {/* Disclaimer */}
-          <div className="max-w-3xl mx-auto text-center border-t border-[var(--color-border)] pt-8">
-            <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
-              <strong className="text-[var(--color-text-secondary)]">Disclaimer:</strong>{" "}
-              The Facial Harmony Score represents geometric analysis of proportions and symmetry.
-              It is not an objective measurement of beauty or attractiveness. Facial geometry varies
-              naturally across individuals, demographics, and cultures. This tool is for educational
-              and entertainment purposes.
-            </p>
-          </div>
+        {/* CTA */}
+        <div className="flex flex-col sm:flex-row gap-3 justify-center mb-12">
+          <Link href="/analyze" className="btn-primary">Analyze another photo</Link>
+          <Link href="/" className="btn-secondary">Back to home</Link>
         </div>
+
+        <p className="max-w-3xl mx-auto text-center text-xs sm:text-sm text-muted leading-relaxed border-t border-[var(--color-border)] pt-8">
+          <strong className="text-soft">Disclaimer:</strong> The Facial Harmony Score is a geometric analysis of
+          proportions and symmetry. It is not an objective measure of beauty or attractiveness. Facial
+          geometry varies naturally across individuals, demographics and cultures. This tool is for
+          educational and entertainment purposes.
+        </p>
       </main>
     </div>
   );
 }
 
-
 /* ========================================
    Sub-components
    ======================================== */
 
-function ScoreRing({ score, size = 160 }: { score: number; size?: number }) {
-  const radius = (size - 20) / 2;
+function ScoreRing({ score, colors }: { score: number; colors: string[] }) {
+  const size = 220;
+  const stroke = 14;
+  const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (score / 100) * circumference;
-  const center = size / 2;
-
-  // Color based on score
-  const getColor = (s: number) => {
-    if (s >= 80) return ["#10b981", "#00d4ff"];
-    if (s >= 60) return ["#00d4ff", "#8b5cf6"];
-    if (s >= 40) return ["#f59e0b", "#f43f5e"];
-    return ["#f43f5e", "#dc2626"];
-  };
-  const [c1, c2] = getColor(score);
+  const offset = circumference * (1 - score / 100);
 
   return (
-    <div className="relative" style={{ width: size, height: size }}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+    <div className="relative w-[min(70vw,14rem)] aspect-square">
+      <svg viewBox={`0 0 ${size} ${size}`} className="w-full h-full" role="img" aria-label={`Harmony score ${score.toFixed(0)} out of 100`}>
         <defs>
-          <linearGradient id="scoreGradient" x1="0" y1="0" x2={String(size)} y2={String(size)}>
-            <stop offset="0%" stopColor={c1} />
-            <stop offset="100%" stopColor={c2} />
+          <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor={colors[0]} />
+            <stop offset="100%" stopColor={colors[1]} />
           </linearGradient>
+          <filter id="ringGlow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="4" result="b" />
+            <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+          </filter>
         </defs>
+        <circle cx={size / 2} cy={size / 2} r={radius} strokeWidth={stroke} className="score-ring-bg" />
         <circle
-          cx={center} cy={center} r={radius}
-          className="score-ring-bg"
-        />
-        <circle
-          cx={center} cy={center} r={radius}
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          strokeWidth={stroke}
           className="score-ring-fill"
-          stroke="url(#scoreGradient)"
+          stroke="url(#ringGrad)"
+          filter="url(#ringGlow)"
           strokeDasharray={circumference}
           strokeDashoffset={offset}
-          style={{ animation: 'score-fill 1.5s ease-out forwards' }}
+          style={{ ["--ring-len" as string]: circumference }}
         />
       </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span
-          className="font-[family-name:var(--font-display)] text-5xl font-bold gradient-text-score"
-          style={{ animation: 'score-count 0.8s ease-out 0.5s forwards', opacity: 0, transformOrigin: 'center' }}
-        >
-          {score.toFixed(0)}
+      <div className="absolute inset-0 grid place-content-center text-center">
+        <span className="font-[family-name:var(--font-display)] text-6xl sm:text-7xl font-bold leading-none gradient-text-score">
+          <CountUp value={score} duration={1800} />
         </span>
-        <span className="text-xs text-[var(--color-text-muted)] mt-1">/ 100</span>
+        <span className="text-sm text-muted mt-1">out of 100</span>
       </div>
     </div>
   );
 }
 
-function SubScoreCard({ title, score, color }: { title: string; score: number; color: string }) {
+function Column({
+  label,
+  value,
+  max,
+  color,
+  delay,
+  small = false,
+}: {
+  label: string;
+  value: number;
+  max: number;
+  color: string;
+  delay: number;
+  small?: boolean;
+}) {
+  const pct = Math.max(8, Math.min(100, (value / max) * 100));
   return (
-    <div className="glass-card p-4 text-center">
-      <p className="text-[10px] text-[var(--color-text-muted)] uppercase tracking-wider mb-2 font-[family-name:var(--font-display)]">
-        {title}
-      </p>
-      <p className="font-[family-name:var(--font-display)] text-2xl font-bold" style={{ color }}>
-        {score.toFixed(0)}
-      </p>
-      <div className="mt-2 h-1 bg-white/5 rounded-full overflow-hidden">
+    <div className="flex-1 h-full flex flex-col items-center justify-end gap-2 min-w-0">
+      <span className={`font-[family-name:var(--font-mono)] ${small ? "text-[11px] sm:text-xs" : "text-xs sm:text-sm"} text-soft`}>
+        {(value * 100).toFixed(small ? 0 : 1)}%
+      </span>
+      <div className="w-full flex-1 flex items-end">
         <div
-          className="h-full rounded-full transition-all duration-1000"
-          style={{ width: `${score}%`, background: color }}
+          className="bar-y w-full rounded-t-xl"
+          style={{ height: `${pct}%`, background: `linear-gradient(180deg, ${color}, ${color}33)`, ["--bar-delay" as string]: `${delay}s` }}
         />
       </div>
-    </div>
-  );
-}
-
-function ThirdBar({ label, value, color }: { label: string; value: number; color: string }) {
-  return (
-    <div className="flex-1 flex flex-col items-center gap-2">
-      <span className="text-xs font-[family-name:var(--font-mono)]">{(value * 100).toFixed(1)}%</span>
-      <div
-        className="w-full rounded-t-lg transition-all duration-1000"
-        style={{
-          height: `${value * 100 * 2.5}%`,
-          minHeight: '20px',
-          background: `linear-gradient(180deg, ${color}, ${color}44)`,
-        }}
-      />
-      <span className="text-[10px] text-[var(--color-text-muted)]">{label}</span>
+      <span className={`${small ? "text-[10px] sm:text-xs" : "text-xs"} text-muted truncate max-w-full`}>{label}</span>
     </div>
   );
 }

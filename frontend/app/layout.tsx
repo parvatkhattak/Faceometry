@@ -1,5 +1,6 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Outfit, Inter, JetBrains_Mono } from "next/font/google";
+import { Background } from "@/components/ui";
 import "./globals.css";
 
 const outfit = Outfit({
@@ -19,6 +20,12 @@ const jetbrains = JetBrains_Mono({
   variable: "--font-mono",
   display: "swap",
 });
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#07070d",
+};
 
 export const metadata: Metadata = {
   title: "Faceometry — The Geometry Behind Your Face",
@@ -40,8 +47,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${outfit.variable} ${inter.variable} ${jetbrains.variable}`}>
-      <body>{children}</body>
+    <html lang="en" data-scroll-behavior="smooth" className={`${outfit.variable} ${inter.variable} ${jetbrains.variable}`}>
+      <body>
+        <Background />
+        {children}
+      </body>
     </html>
   );
 }
