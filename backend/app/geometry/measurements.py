@@ -158,24 +158,24 @@ def calculate_measurements(landmarks: FaceLandmarks) -> MeasurementResult:
 # --- Proportion scoring ---
 
 # Reference ranges for common facial proportions.
-# Each tuple is (min_ideal, max_ideal) — the range considered "well-proportioned."
-# These are approximate classical references, NOT claimed to be universally ideal.
+# Each tuple is (min_ideal, max_ideal) with center representing classical harmony.
 PROPORTION_REFERENCES: dict[str, tuple[float, float]] = {
-    "face_aspect_ratio": (1.3, 1.6),       # Classical: ~1.4-1.5
-    "eye_face_width_ratio": (0.20, 0.28),   # Eyes ~24% of face width
-    "nose_aspect_ratio": (0.8, 1.6),        # Nose length/width
-    "mouth_nose_ratio": (1.2, 1.8),         # Mouth typically wider than nose
-    "inter_eye_distance": (0.15, 0.25),     # Normalized inter-eye
+    "face_aspect_ratio": (1.35, 1.55),      # Classical target ~1.45
+    "eye_face_width_ratio": (0.22, 0.26),  # Eyes ~24% of face width
+    "nose_aspect_ratio": (1.10, 1.40),      # Nose length/width ~1.25
+    "mouth_nose_ratio": (1.35, 1.65),      # Mouth typically ~1.5x nose width
+    "inter_eye_distance": (0.18, 0.22),    # Inter-eye distance ~20% of face height
 }
 
 
 def calculate_proportion_score(measurements: MeasurementResult) -> float:
     """
-    Calculate how close the measured proportions are to reference ranges.
+    Calculate how close measured proportions are to classical reference ranges.
 
-    For each proportion:
-    - If within range → 100 points
-    - If outside range → score decreases with deviation
+    Instead of awarding flat 100s to wide intervals, scores scale smoothly:
+    - Ideal center point scores 100.
+    - Within classical core range scores 85–100.
+    - Deviations beyond core range scale down progressively (50–80).
 
     Returns:
         Proportion score (0–100).
@@ -188,16 +188,19 @@ def calculate_proportion_score(measurements: MeasurementResult) -> float:
         if value <= 0:
             continue
 
-        if ref_min <= value <= ref_max:
-            scores.append(100.0)
+        ideal = (ref_min + ref_max) / 2.0
+        half_span = (ref_max - ref_min) / 2.0
+        diff = abs(value - ideal)
+
+        if diff <= half_span:
+            # Smooth descent from 100.0 at ideal to 85.0 at core boundary
+            score = 100.0 - 15.0 * (diff / half_span)
         else:
-            # Calculate distance from nearest boundary
-            if value < ref_min:
-                deviation = (ref_min - value) / ref_min
-            else:
-                deviation = (value - ref_max) / ref_max
+            # Steeper descent outside core range
+            excess = diff - half_span
+            rel_excess = excess / ideal
+            score = max(0.0, 85.0 - rel_excess * 150.0)
 
-            score = max(0.0, 100.0 * (1.0 - deviation))
-            scores.append(score)
+        scores.append(score)
 
-    return sum(scores) / len(scores) if scores else 0.0
+    return clamp(sum(scores) / len(scores)) if scores else 0.0

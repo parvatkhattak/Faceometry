@@ -86,9 +86,8 @@ def analyze_facial_thirds(landmarks: FaceLandmarks) -> FacialThirdsResult:
     ]
     mean_deviation = sum(deviations) / len(deviations)
 
-    # Convert deviation to score
-    # A mean deviation of 0 → 100, deviation of 0.1 → ~67
-    score = clamp(100.0 * (1.0 - mean_deviation * 3.0))
+    # Convert deviation to score (sharper curve: dev 0.02 → 90, dev 0.05 → 75, dev 0.08 → 60)
+    score = clamp(100.0 * (1.0 - mean_deviation * 5.0))
 
     return FacialThirdsResult(
         upper_third=round(upper_prop, 3),

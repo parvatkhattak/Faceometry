@@ -129,8 +129,8 @@ def analyze_symmetry(landmarks: FaceLandmarks) -> SymmetryResult:
         if region_errors:
             mean_error = sum(region_errors) / len(region_errors)
             # Convert error to score: lower error = higher score
-            # Scale factor: error of 0.05 (5% of face height) → score of ~50
-            region_score = clamp(100.0 * (1.0 - mean_error * 10.0))
+            # Error of 0.01 (1% face height) → ~82, 0.02 → ~64, 0.03 → ~46
+            region_score = clamp(100.0 * (1.0 - mean_error * 18.0))
             region_results.append(
                 RegionSymmetry(region=region_name, error=mean_error, score=region_score)
             )

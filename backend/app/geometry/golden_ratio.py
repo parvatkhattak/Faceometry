@@ -75,8 +75,8 @@ def analyze_golden_ratio(measurements: MeasurementResult) -> GoldenRatioResult:
         # Deviation from φ
         deviation = abs(measured_ratio - phi) / phi
 
-        # Score: max(0, 100 * (1 - deviation))
-        score = clamp(100.0 * (1.0 - deviation))
+        # Score with sharper discrimination: 5% off → 90, 10% off → 80, 20% off → 60
+        score = clamp(100.0 * (1.0 - deviation * 2.0))
 
         ratio_results.append(
             RatioResult(

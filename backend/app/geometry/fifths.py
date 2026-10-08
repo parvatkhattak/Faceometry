@@ -71,9 +71,8 @@ def analyze_facial_fifths(landmarks: FaceLandmarks) -> FacialFifthsResult:
     deviations = [abs(s - ideal) for s in sections]
     mean_deviation = sum(deviations) / len(deviations)
 
-    # Convert deviation to score
-    # Mean deviation of 0 → 100, deviation of 0.1 → ~50
-    score = clamp(100.0 * (1.0 - mean_deviation * 5.0))
+    # Convert deviation to score (sharper curve: dev 0.015 → 88, dev 0.035 → 72, dev 0.06 → 52)
+    score = clamp(100.0 * (1.0 - mean_deviation * 8.0))
 
     return FacialFifthsResult(
         sections=[round(s, 3) for s in sections],
