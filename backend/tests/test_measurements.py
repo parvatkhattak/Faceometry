@@ -39,3 +39,9 @@ class TestMeasurements:
     def test_to_dict_has_all_keys(self):
         d = calculate_measurements(_face()).to_dict()
         assert {"face_width", "inter_eye_distance", "mouth_width", "hairline_to_nose_base"} <= d.keys()
+
+    def test_calculate_proportion_score(self):
+        from app.geometry.measurements import calculate_proportion_score
+        m = calculate_measurements(_face())
+        score = calculate_proportion_score(m)
+        assert 0.0 <= score <= 100.0
