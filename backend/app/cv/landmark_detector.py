@@ -11,6 +11,7 @@ all geometry, symmetry, and scoring modules depend on its output.
 from __future__ import annotations
 
 import logging
+import math
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
@@ -165,6 +166,66 @@ class FaceLandmarks:
         if isinstance(index, list):
             raise ValueError(f"'{landmark_name}' is a region, not a single landmark. Use get_region().")
         return self.get_point(index)
+
+    def align_upright(self) -> FaceLandmarks:
+        """
+        Return a copy of FaceLandmarks rotated in-plane so the face is upright.
+        Compensates for head roll (tilt) so geometric measurements are rotation-invariant.
+        """
+        if not self.landmarks_3d or len(self.landmarks_3d) < 468:
+            return self
+
+        try:
+            left_eye = self.get_point(LANDMARK_INDICES["left_eye_outer"])
+            right_eye = self.get_point(LANDMARK_INDICES["right_eye_outer"])
+
+            aspect = (
+                self.image_width / self.image_height
+                if self.image_width > 0 and self.image_height > 0
+                else 1.0
+            )
+
+            # Eye vector in aspect-corrected coordinates
+            dx = (right_eye.x - left_eye.x) * aspect
+            dy = right_eye.y - left_eye.y
+            angle = math.atan2(dy, dx)
+
+            # If angle is negligible (< 0.1 degree), no need to rotate
+            if abs(angle) < 0.0017:
+                return self
+
+            # Center of rotation: midpoint between forehead and chin
+            forehead = self.get_landmark("forehead_top")
+            chin = self.get_landmark("chin")
+            cx = (forehead.x + chin.x) / 2
+            cy = (forehead.y + chin.y) / 2
+
+            cos_a = math.cos(-angle)
+            sin_a = math.sin(-angle)
+
+            new_pts = []
+            for lm in self.landmarks_3d:
+                # Transform to center and aspect-corrected space
+                x_scaled = (lm.x - cx) * aspect
+                y_scaled = lm.y - cy
+
+                # Rotate by -angle
+                rot_x_scaled = x_scaled * cos_a - y_scaled * sin_a
+                rot_y = x_scaled * sin_a + y_scaled * cos_a
+
+                # Transform back to normalized space
+                rot_x = rot_x_scaled / aspect + cx
+                rot_y = rot_y + cy
+
+                new_pts.append(Point3D(x=rot_x, y=rot_y, z=lm.z))
+
+            return FaceLandmarks(
+                landmarks_3d=new_pts,
+                image_width=self.image_width,
+                image_height=self.image_height,
+            )
+        except Exception:
+            return self
 
 
 @dataclass

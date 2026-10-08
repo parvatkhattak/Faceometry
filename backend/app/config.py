@@ -19,7 +19,7 @@ class ImageValidationSettings(BaseSettings):
     min_face_count: int = 1
     max_face_count: int = 1
     min_face_fraction: float = Field(
-        default=0.10,
+        default=0.04,
         description="Minimum fraction of image area the face bounding box must occupy.",
     )
 
@@ -34,9 +34,9 @@ class ImageValidationSettings(BaseSettings):
     max_brightness: float = Field(default=220.0, description="Maximum mean brightness (0-255).")
 
     # Pose thresholds (degrees)
-    max_yaw: float = Field(default=15.0, description="Maximum absolute yaw in degrees.")
-    max_pitch: float = Field(default=15.0, description="Maximum absolute pitch in degrees.")
-    max_roll: float = Field(default=10.0, description="Maximum absolute roll in degrees.")
+    max_yaw: float = Field(default=30.0, description="Maximum absolute yaw in degrees.")
+    max_pitch: float = Field(default=25.0, description="Maximum absolute pitch in degrees.")
+    max_roll: float = Field(default=35.0, description="Maximum absolute roll in degrees.")
 
     # Upload limits
     max_file_size_mb: float = 10.0

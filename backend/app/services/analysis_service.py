@@ -116,20 +116,23 @@ class AnalysisService:
         landmarks = validation.landmarks
         pose = validation.pose
 
+        # Align landmarks to compensate for head roll (tilt) so calculations are rotation-invariant
+        aligned_landmarks = landmarks.align_upright() if landmarks else landmarks
+
         # 3-4. Calculate measurements
-        measurements = calculate_measurements(landmarks)
+        measurements = calculate_measurements(aligned_landmarks)
 
         # 5. Symmetry analysis
-        symmetry_result = analyze_symmetry(landmarks)
+        symmetry_result = analyze_symmetry(aligned_landmarks)
 
         # 6. Golden ratio analysis
         golden_result = analyze_golden_ratio(measurements)
 
         # 7. Facial thirds
-        thirds_result = analyze_facial_thirds(landmarks)
+        thirds_result = analyze_facial_thirds(aligned_landmarks)
 
         # 8. Facial fifths
-        fifths_result = analyze_facial_fifths(landmarks)
+        fifths_result = analyze_facial_fifths(aligned_landmarks)
 
         # 9. Proportion score
         proportion_score = calculate_proportion_score(measurements)

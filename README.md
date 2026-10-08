@@ -194,10 +194,10 @@ All tunables live in [`backend/app/config.py`](backend/app/config.py) and can be
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `min_face_fraction` | `0.10` | Minimum fraction of the image the face must occupy |
+| `min_face_fraction` | `0.04` | Minimum fraction of the image the face must occupy |
 | `blur_threshold` | `30.0` | Minimum Laplacian variance (lower means blurrier) |
 | `min_brightness` / `max_brightness` | `40` / `220` | Allowed mean brightness (0–255) |
-| `max_yaw` / `max_pitch` / `max_roll` | `15°` / `15°` / `10°` | Maximum head rotation |
+| `max_yaw` / `max_pitch` / `max_roll` | `30°` / `25°` / `35°` | Maximum head rotation (auto-aligned for tilt) |
 | `max_file_size_mb` | `10` | Upload size limit |
 | `allowed_extensions` | `.jpg .jpeg .png .webp` | Accepted formats |
 
@@ -300,10 +300,10 @@ All measurements are normalized by face size, so the result does not depend on i
 
 For best results, use a photo that:
 
-- shows **exactly one** face, looking straight at the camera
-- has the head rotated no more than about 15° (roll up to 10°)
+- shows **exactly one** face, looking towards the camera
+- has the head rotated within ±30° yaw, ±25° pitch, and ±35° roll (head tilts are automatically rectified)
 - is sharp, evenly lit, and not over- or under-exposed
-- shows the face clearly, filling at least 10% of the frame
+- shows the face clearly, filling at least 4% of the frame
 - is JPEG, PNG, or WebP and under 10 MB
 
 ---
@@ -316,7 +316,7 @@ source venv/bin/activate
 pytest -v
 ```
 
-The suite has 55 tests covering measurements, symmetry, golden ratio, thirds and fifths, scoring, and the API.
+The suite has 61 tests covering measurements, symmetry, golden ratio, thirds and fifths, pose validation/alignment, scoring, and the API.
 
 Frontend checks:
 

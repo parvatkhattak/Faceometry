@@ -29,6 +29,7 @@ from app.cv.landmark_detector import (
     FaceLandmarks,
     LandmarkDetector,
     LANDMARK_INDICES,
+    Point2D,
 )
 
 logger = logging.getLogger(__name__)
@@ -202,36 +203,63 @@ class ImageValidator:
         to estimate yaw, pitch, and roll.
         """
         try:
-            nose_tip = landmarks.get_landmark("nose_tip")
-            chin = landmarks.get_landmark("chin")
-            forehead = landmarks.get_landmark("forehead_top")
-            face_left = landmarks.get_landmark("face_left")
-            face_right = landmarks.get_landmark("face_right")
             left_eye_outer = landmarks.get_point(LANDMARK_INDICES["left_eye_outer"])
             right_eye_outer = landmarks.get_point(LANDMARK_INDICES["right_eye_outer"])
 
-            # Yaw estimation: compare nose position relative to face center
-            face_center_x = (face_left.x + face_right.x) / 2
-            face_width = abs(face_right.x - face_left.x)
+            aspect = (
+                landmarks.image_width / landmarks.image_height
+                if landmarks.image_width > 0 and landmarks.image_height > 0
+                else 1.0
+            )
+
+            # Roll estimation: angle of the line connecting the eyes (aspect-corrected)
+            dx = (right_eye_outer.x - left_eye_outer.x) * aspect
+            dy = right_eye_outer.y - left_eye_outer.y
+            roll = math.degrees(math.atan2(dy, dx))
+
+            # De-rotate key points by roll so head tilt doesn't falsely inflate yaw or pitch
+            forehead = landmarks.get_landmark("forehead_top")
+            chin = landmarks.get_landmark("chin")
+            face_left = landmarks.get_landmark("face_left")
+            face_right = landmarks.get_landmark("face_right")
+            nose_tip = landmarks.get_landmark("nose_tip")
+
+            cx = (forehead.x + chin.x) / 2
+            cy = (forehead.y + chin.y) / 2
+            roll_rad = math.radians(roll)
+            cos_a = math.cos(-roll_rad)
+            sin_a = math.sin(-roll_rad)
+
+            def _rot(pt: Point2D) -> Point2D:
+                xs = (pt.x - cx) * aspect
+                ys = pt.y - cy
+                rx = (xs * cos_a - ys * sin_a) / aspect + cx
+                ry = xs * sin_a + ys * cos_a + cy
+                return Point2D(x=rx, y=ry)
+
+            r_face_left = _rot(face_left)
+            r_face_right = _rot(face_right)
+            r_nose_tip = _rot(nose_tip)
+            r_forehead = _rot(forehead)
+            r_chin = _rot(chin)
+
+            # Yaw estimation in upright frame: compare nose position relative to face center
+            face_center_x = (r_face_left.x + r_face_right.x) / 2
+            face_width = abs(r_face_right.x - r_face_left.x)
             if face_width > 0:
-                yaw_ratio = (nose_tip.x - face_center_x) / (face_width / 2)
-                yaw = math.degrees(math.asin(max(-1, min(1, yaw_ratio))))
+                yaw_ratio = (r_nose_tip.x - face_center_x) / (face_width / 2)
+                yaw = math.degrees(math.asin(max(-1.0, min(1.0, yaw_ratio))))
             else:
                 yaw = 0.0
 
-            # Pitch estimation: compare nose position relative to face vertical center
-            face_center_y = (forehead.y + chin.y) / 2
-            face_height = abs(chin.y - forehead.y)
+            # Pitch estimation in upright frame: compare nose position relative to face vertical center
+            face_center_y = (r_forehead.y + r_chin.y) / 2
+            face_height = abs(r_chin.y - r_forehead.y)
             if face_height > 0:
-                pitch_ratio = (nose_tip.y - face_center_y) / (face_height / 2)
-                pitch = math.degrees(math.asin(max(-1, min(1, pitch_ratio)))) * 0.5
+                pitch_ratio = (r_nose_tip.y - face_center_y) / (face_height / 2)
+                pitch = math.degrees(math.asin(max(-1.0, min(1.0, pitch_ratio)))) * 0.5
             else:
                 pitch = 0.0
-
-            # Roll estimation: angle of the line connecting the eyes
-            dx = right_eye_outer.x - left_eye_outer.x
-            dy = right_eye_outer.y - left_eye_outer.y
-            roll = math.degrees(math.atan2(dy, dx))
 
             return PoseEstimate(yaw=round(yaw, 1), pitch=round(pitch, 1), roll=round(roll, 1))
 
