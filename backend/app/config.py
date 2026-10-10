@@ -7,9 +7,11 @@ All thresholds, weights, and limits are defined here — not scattered throughou
 
 from __future__ import annotations
 
+import json
 import math
+from typing import Any, Union
 from pydantic_settings import BaseSettings
-from pydantic import ConfigDict, Field
+from pydantic import ConfigDict, Field, field_validator
 
 
 class ImageValidationSettings(BaseSettings):
@@ -115,7 +117,29 @@ class AppSettings(BaseSettings):
     debug: bool = False
 
     # CORS
-    cors_origins: list[str] = ["http://localhost:3000", "http://localhost:3001"]
+    cors_origins: Union[list[str], str] = ["http://localhost:3000", "http://localhost:3001"]
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def assemble_cors_origins(cls, v: Any) -> list[str]:
+        """Support JSON arrays, comma-delimited strings, or single URL strings."""
+        if isinstance(v, str):
+            s = v.strip()
+            if not s:
+                return ["*"]
+            if s.startswith("[") and s.endswith("]"):
+                try:
+                    parsed = json.loads(s)
+                    if isinstance(parsed, list):
+                        return [str(item).strip() for item in parsed if item]
+                except Exception:
+                    pass
+            if "," in s:
+                return [item.strip() for item in s.split(",") if item.strip()]
+            return [s]
+        elif isinstance(v, (list, tuple)):
+            return [str(item).strip() for item in v if item]
+        return v
 
     # Sub-settings
     validation: ImageValidationSettings = ImageValidationSettings()
