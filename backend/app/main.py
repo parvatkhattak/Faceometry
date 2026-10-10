@@ -33,6 +33,18 @@ app.add_middleware(
 app.include_router(analyze_router)
 
 
+@app.get("/")
+async def root():
+    """Root endpoint providing service status and documentation link."""
+    return {
+        "service": settings.app_name,
+        "version": settings.app_version,
+        "status": "online",
+        "docs": "/docs",
+        "health": "/health",
+    }
+
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint for deployment monitoring."""
